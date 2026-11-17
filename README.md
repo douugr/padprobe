@@ -2,7 +2,7 @@
 
 Ferramenta de diagnóstico para descobrir como um **controle Bluetooth** conversa com um **iPad antigo (iOS 8, jailbreak)** pelo [BTstack](https://github.com/bluekitchen/btstack).
 
-O app procura dispositivos, conecta no controle (HID por L2CAP) e mostra os relatórios brutos em hexadecimal. Você marca o "repouso" e aperta um botão por vez, e ele destaca quais bytes e bits mudaram. Foi assim que o formato do 8BitDo Pro 2 foi mapeado para o [Retro16](https://github.com/douugr/retro16).
+O app procura dispositivos, conecta no controle (HID por L2CAP) e mostra os relatórios brutos em hexadecimal. Você marca o "repouso" e aperta um botão por vez, e ele destaca quais bytes e bits mudaram. Foi assim que o formato do 8BitDo Pro 2 foi mapeado para o [MD16](https://github.com/douugr/md16).
 
 ## Requisitos
 
