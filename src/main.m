@@ -59,13 +59,13 @@ static NSString *pp_cod_string(uint32_t cod) {
             case 0x02: return @"gamepad";
             default: break;
         }
-        if (minor & 0x10) return @"teclado";
+        if (minor & 0x10) return @"keyboard";
         if (minor & 0x20) return @"mouse";
-        return @"periférico";
+        return @"peripheral";
     }
-    if (major == 0x01) return @"computador";
-    if (major == 0x02) return @"telefone";
-    if (major == 0x04) return @"áudio";
+    if (major == 0x01) return @"computer";
+    if (major == 0x02) return @"phone";
+    if (major == 0x04) return @"audio";
     return [NSString stringWithFormat:@"COD 0x%06X", cod];
 }
 
@@ -83,7 +83,7 @@ static int pp_add_device(bd_addr_t addr, uint8_t psrm, uint16_t clock, uint32_t 
         idx = gDeviceCount++;
         memset(&gDevices[idx], 0, sizeof(pp_device_t));
         BD_ADDR_COPY(gDevices[idx].addr, addr);
-        pp_log([NSString stringWithFormat:@"Encontrado %@ (%@)", pp_addr_string(addr), pp_cod_string(cod)]);
+        pp_log([NSString stringWithFormat:@"Found %@ (%@)", pp_addr_string(addr), pp_cod_string(cod)]);
     }
     gDevices[idx].pageScanRepMode = psrm;
     gDevices[idx].clockOffset = clock;
@@ -138,19 +138,19 @@ static void pp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
     switch (packet[0]) {
         case BTSTACK_EVENT_STATE:
             if (packet[2] == HCI_STATE_WORKING) {
-                pp_status(@"Bluetooth (BTstack) ligado");
-                pp_log(@"BTstack pronto. Registrando serviços HID para aceitar reconexões.");
+                pp_status(@"Bluetooth (BTstack) on");
+                pp_log(@"BTstack ready. Registering HID services to accept reconnections.");
                 bt_send_cmd(&l2cap_register_service, PSM_HID_CONTROL, 250);
                 bt_send_cmd(&l2cap_register_service, PSM_HID_INTERRUPT, 250);
                 bt_send_cmd(&hci_write_inquiry_mode, 0x02);  // resultados com nome (EIR), quando suportado
             } else {
-                pp_log([NSString stringWithFormat:@"Estado do BTstack: %u", packet[2]]);
+                pp_log([NSString stringWithFormat:@"BTstack state: %u", packet[2]]);
             }
             break;
 
         case BTSTACK_EVENT_POWERON_FAILED:
-            pp_status(@"Falha ao ligar o Bluetooth");
-            pp_log(@"BTSTACK_EVENT_POWERON_FAILED: desligue o Bluetooth do iOS em Ajustes e tente de novo.");
+            pp_status(@"Could not turn Bluetooth on");
+            pp_log(@"BTSTACK_EVENT_POWERON_FAILED: turn off iOS Bluetooth in Settings and try again.");
             break;
 
         case HCI_EVENT_INQUIRY_RESULT: {
@@ -183,8 +183,8 @@ static void pp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         }
         case HCI_EVENT_INQUIRY_COMPLETE:
             gInquiryActive = 0;
-            pp_status(@"Busca terminada");
-            pp_log(@"Busca terminada. Pedindo nomes dos dispositivos...");
+            pp_status(@"Search finished");
+            pp_log(@"Search finished. Requesting device names...");
             pp_request_next_name();
             break;
 
@@ -205,24 +205,24 @@ static void pp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
             // Pareamento antigo (sem SSP): tenta "0000" (o comando copia sempre 16 bytes)
             uint8_t pin[16] = {'0', '0', '0', '0'};
             bt_flip_addr(addr, &packet[2]);
-            pp_log([NSString stringWithFormat:@"Pedido de PIN de %@, respondendo 0000", pp_addr_string(addr)]);
+            pp_log([NSString stringWithFormat:@"PIN request from %@, answering 0000", pp_addr_string(addr)]);
             bt_send_cmd(&hci_pin_code_request_reply, addr, 4, pin);
             break;
         }
 
         case HCI_EVENT_USER_CONFIRMATION_REQUEST:
-            pp_log(@"Pareamento seguro (SSP): o BTstack aceita automaticamente.");
+            pp_log(@"Secure pairing (SSP): BTstack accepts it automatically.");
             break;
 
         case HCI_EVENT_AUTHENTICATION_COMPLETE_EVENT:
-            pp_log([NSString stringWithFormat:@"Autenticação concluída, status 0x%02X", packet[2]]);
+            pp_log([NSString stringWithFormat:@"Authentication finished, status 0x%02X", packet[2]]);
             break;
 
         case L2CAP_EVENT_INCOMING_CONNECTION: {
             bt_flip_addr(addr, &packet[2]);
             uint16_t psm = READ_BT_16(packet, 10);
             uint16_t localCid = READ_BT_16(packet, 12);
-            pp_log([NSString stringWithFormat:@"Conexão de entrada de %@, PSM 0x%02X: aceitando", pp_addr_string(addr), psm]);
+            pp_log([NSString stringWithFormat:@"Incoming connection from %@, PSM 0x%02X: accepting", pp_addr_string(addr), psm]);
             bt_send_cmd(&l2cap_accept_connection, localCid);
             break;
         }
@@ -233,11 +233,11 @@ static void pp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
             uint16_t psm = READ_BT_16(packet, 11);
             uint16_t localCid = READ_BT_16(packet, 13);
             if (status) {
-                pp_log([NSString stringWithFormat:@"Falha ao abrir canal PSM 0x%02X: status 0x%02X", psm, status]);
-                pp_status(@"Falha na conexão");
+                pp_log([NSString stringWithFormat:@"Failed to open channel PSM 0x%02X: status 0x%02X", psm, status]);
+                pp_status(@"Connection failed");
                 break;
             }
-            pp_log([NSString stringWithFormat:@"Canal aberto: PSM 0x%02X, cid 0x%04X", psm, localCid]);
+            pp_log([NSString stringWithFormat:@"Channel open: PSM 0x%02X, cid 0x%04X", psm, localCid]);
             if (psm == PSM_HID_CONTROL) {
                 gControlCid = localCid;
                 if (!gInterruptCid) {
@@ -247,8 +247,8 @@ static void pp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
                 gInterruptCid = localCid;
                 gBaselineLen = 0;
                 gLastLen = 0;
-                pp_status(@"Conectado! Aperte os botões");
-                pp_log(@"Controle conectado. Solte tudo, aperte \"Marcar repouso\" e depois um botão por vez.");
+                pp_status(@"Connected! Press the buttons");
+                pp_log(@"Controller connected. Release everything, tap \"Mark idle\", then press one button at a time.");
             }
             break;
         }
@@ -257,21 +257,21 @@ static void pp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
             uint16_t localCid = READ_BT_16(packet, 2);
             if (localCid == gInterruptCid) gInterruptCid = 0;
             if (localCid == gControlCid) gControlCid = 0;
-            pp_log([NSString stringWithFormat:@"Canal 0x%04X fechado", localCid]);
-            if (!gInterruptCid && !gControlCid) pp_status(@"Desconectado");
+            pp_log([NSString stringWithFormat:@"Channel 0x%04X closed", localCid]);
+            if (!gInterruptCid && !gControlCid) pp_status(@"Disconnected");
             break;
         }
 
         case HCI_EVENT_DISCONNECTION_COMPLETE:
-            pp_log([NSString stringWithFormat:@"Desconectado (motivo 0x%02X)", packet[5]]);
+            pp_log([NSString stringWithFormat:@"Disconnected (reason 0x%02X)", packet[5]]);
             gInterruptCid = 0;
             gControlCid = 0;
-            pp_status(@"Desconectado");
+            pp_status(@"Disconnected");
             break;
 
         case HCI_EVENT_COMMAND_STATUS:
             if (packet[2] != 0) {
-                pp_log([NSString stringWithFormat:@"Comando 0x%04X recusado, status 0x%02X", READ_BT_16(packet, 4), packet[2]]);
+                pp_log([NSString stringWithFormat:@"Command 0x%04X rejected, status 0x%02X", READ_BT_16(packet, 4), packet[2]]);
             }
             break;
 
@@ -350,12 +350,12 @@ static void pp_report(const uint8_t *data, int len) {
     self.statusLabel = [[UILabel alloc] init];
     self.statusLabel.textColor = [UIColor whiteColor];
     self.statusLabel.font = [UIFont boldSystemFontOfSize:20];
-    self.statusLabel.text = @"Iniciando BTstack...";
+    self.statusLabel.text = @"Starting BTstack...";
     [self.view addSubview:self.statusLabel];
 
-    self.scanButton = [self button:@"Procurar controles" action:@selector(scanTapped)];
-    self.baselineButton = [self button:@"Marcar repouso" action:@selector(baselineTapped)];
-    self.saveButton = [self button:@"Salvar log" action:@selector(saveTapped)];
+    self.scanButton = [self button:@"Search for controllers" action:@selector(scanTapped)];
+    self.baselineButton = [self button:@"Mark idle" action:@selector(baselineTapped)];
+    self.saveButton = [self button:@"Save log" action:@selector(saveTapped)];
 
     self.table = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain];
     self.table.dataSource = self;
@@ -365,7 +365,7 @@ static void pp_report(const uint8_t *data, int len) {
     [self.view addSubview:self.table];
 
     self.reportLabel = [self monoLabel:16];
-    self.reportLabel.text = @"(nenhum dado ainda)";
+    self.reportLabel.text = @"(no data yet)";
     self.diffLabel = [self monoLabel:22];
     self.diffLabel.textColor = [UIColor colorWithRed:1 green:0.85 blue:0.2 alpha:1];
     self.diffLabel.text = @"";
@@ -377,16 +377,16 @@ static void pp_report(const uint8_t *data, int len) {
     self.logView.font = [UIFont fontWithName:@"Menlo-Regular" size:12] ?: [UIFont systemFontOfSize:12];
     [self.view addSubview:self.logView];
 
-    [self appendLog:@"PadProbe: conecta controles Bluetooth pelo BTstack."];
-    [self appendLog:@"Dica: deixe o Bluetooth do iOS DESLIGADO em Ajustes antes de usar."];
+    [self appendLog:@"PadProbe: connects Bluetooth controllers through BTstack."];
+    [self appendLog:@"Tip: keep iOS Bluetooth OFF in Settings before using it."];
     [self startBTstack];
 }
 
 - (void)startBTstack {
     run_loop_init(RUN_LOOP_COCOA);
     if (bt_open()) {
-        self.statusLabel.text = @"BTdaemon indisponível";
-        [self appendLog:@"Não consegui falar com o BTdaemon. O app precisa estar em /Applications (fora do sandbox) e o pacote BTstack instalado."];
+        self.statusLabel.text = @"BTdaemon unavailable";
+        [self appendLog:@"Could not talk to BTdaemon. The app must be in /Applications (outside the sandbox) and the BTstack package must be installed."];
         return;
     }
     self.btOpen = YES;
@@ -426,12 +426,12 @@ static void pp_report(const uint8_t *data, int len) {
     if (gInquiryActive) {
         bt_send_cmd(&hci_inquiry_cancel);
         gInquiryActive = 0;
-        self.statusLabel.text = @"Busca cancelada";
+        self.statusLabel.text = @"Search cancelled";
         return;
     }
     gInquiryActive = 1;
-    self.statusLabel.text = @"Procurando... (coloque o controle em modo de pareamento)";
-    [self appendLog:@"Procurando dispositivos por ~12 s"];
+    self.statusLabel.text = @"Searching... (put your controller in pairing mode)";
+    [self appendLog:@"Searching for devices for ~12 s"];
     bt_send_cmd(&hci_inquiry, HCI_INQUIRY_LAP, 10, 0);
 }
 
@@ -439,8 +439,8 @@ static void pp_report(const uint8_t *data, int len) {
     if (gLastLen == 0) return;
     memcpy(gBaseline, gLastReport, gLastLen);
     gBaselineLen = gLastLen;
-    self.diffLabel.text = @"(repouso marcado: aperte um botão)";
-    [self appendLog:[NSString stringWithFormat:@"Repouso: %@", [self hex:gBaseline length:gBaselineLen]]];
+    self.diffLabel.text = @"(idle marked: press a button)";
+    [self appendLog:[NSString stringWithFormat:@"Idle: %@", [self hex:gBaseline length:gBaselineLen]]];
 }
 
 - (void)saveTapped {
@@ -448,8 +448,8 @@ static void pp_report(const uint8_t *data, int len) {
     NSString *path = [docs stringByAppendingPathComponent:@"padprobe.txt"];
     NSError *error = nil;
     [self.logText writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&error];
-    [self appendLog:error ? [NSString stringWithFormat:@"Erro ao salvar: %@", error.localizedDescription]
-                          : [NSString stringWithFormat:@"Log salvo em %@", path]];
+    [self appendLog:error ? [NSString stringWithFormat:@"Error saving: %@", error.localizedDescription]
+                          : [NSString stringWithFormat:@"Log saved to %@", path]];
 }
 
 #pragma mark Log / report
@@ -493,14 +493,14 @@ static void pp_report(const uint8_t *data, int len) {
             [diffs addObject:[NSString stringWithFormat:@"b%d=%02X (bits %02X)", i, data[i], x]];
         }
     }
-    self.diffLabel.text = diffs.count ? [diffs componentsJoinedByString:@"   "] : @"(igual ao repouso)";
+    self.diffLabel.text = diffs.count ? [diffs componentsJoinedByString:@"   "] : @"(same as idle)";
 
     // Registra no log, limitando a ~10 linhas por segundo
     CFTimeInterval now = CACurrentMediaTime();
     if (now - self.lastLogTime > 0.1) {
         self.lastLogTime = now;
         [self appendLog:[NSString stringWithFormat:@"%@| %@", [self hex:data length:len],
-                         diffs.count ? [diffs componentsJoinedByString:@" "] : @"repouso"]];
+                         diffs.count ? [diffs componentsJoinedByString:@" "] : @"idle"]];
     }
 }
 
@@ -523,8 +523,8 @@ static void pp_report(const uint8_t *data, int len) {
         cell.detailTextLabel.textColor = [UIColor colorWithWhite:0.65 alpha:1];
     }
     pp_device_t *d = &gDevices[indexPath.row];
-    cell.textLabel.text = d->name[0] ? [NSString stringWithUTF8String:d->name] : @"(sem nome)";
-    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@  ·  %@  ·  toque para conectar",
+    cell.textLabel.text = d->name[0] ? [NSString stringWithUTF8String:d->name] : @"(no name)";
+    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@  ·  %@  ·  tap to connect",
                                  pp_addr_string(d->addr), pp_cod_string(d->cod)];
     return cell;
 }
@@ -540,8 +540,8 @@ static void pp_report(const uint8_t *data, int len) {
     BD_ADDR_COPY(gTargetAddr, d->addr);
     gControlCid = 0;
     gInterruptCid = 0;
-    self.statusLabel.text = @"Conectando...";
-    [self appendLog:[NSString stringWithFormat:@"Conectando a %@ (%s)...", pp_addr_string(d->addr), d->name]];
+    self.statusLabel.text = @"Connecting...";
+    [self appendLog:[NSString stringWithFormat:@"Connecting to %@ (%s)...", pp_addr_string(d->addr), d->name]];
     bt_send_cmd(&l2cap_create_channel, gTargetAddr, PSM_HID_CONTROL);
 }
 

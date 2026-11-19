@@ -1,25 +1,29 @@
 # PadProbe
 
-Ferramenta de diagnóstico para descobrir como um **controle Bluetooth** conversa com um **iPad antigo (iOS 8, jailbreak)** pelo [BTstack](https://github.com/bluekitchen/btstack).
+Diagnostic tool to find out how a **Bluetooth controller** talks to an **old iPad (iOS 8, jailbreak)** through [BTstack](https://github.com/bluekitchen/btstack).
 
-O app procura dispositivos, conecta no controle (HID por L2CAP) e mostra os relatórios brutos em hexadecimal. Você marca o "repouso" e aperta um botão por vez, e ele destaca quais bytes e bits mudaram. Foi assim que o formato do 8BitDo Pro 2 foi mapeado para o [MD16](https://github.com/douugr/md16).
+The app searches for devices, connects to the controller (HID over L2CAP) and shows the raw reports in hex. You mark the "idle" state and press one button at a time, and it highlights which bytes and bits changed. That's how the 8BitDo Pro 2's format was mapped for [MD16](https://github.com/douugr/md16) and [SNES16](https://github.com/douugr/snes16).
 
-## Requisitos
+## Install
 
-- iPad com iOS 8 e jailbreak, com OpenSSH e o pacote **BTstack** (`ch.ringwald.btstack` 1.1)
-- Mac com o Xcode 13.4.1 extraído (toolchain armv7) e `ldid`
+Add the Cydia repository **https://douugr.github.io/repo/** (Cydia or Melder → Sources → Edit → Add) and install **PadProbe**. The BTstack package is installed with it.
 
-## Compilar e instalar
+## Requirements (to build)
+
+- Jailbroken iPad on iOS 8 with OpenSSH and the **BTstack** package (`ch.ringwald.btstack` 1.1)
+- Mac with Xcode 13.4.1 extracted (armv7 toolchain) and `ldid`
+
+## Build and install
 
 ```bash
-export X13=/caminho/para/Xcode-13.4.1.app/Contents/Developer
+export X13=/path/to/Xcode-13.4.1.app/Contents/Developer
 ./build.sh install
 ```
 
-O app é instalado em `/Applications`, fora do sandbox, para poder falar com o BTdaemon. A `libBTstack.dylib` é copiada do próprio iPad e não é versionada.
+The app is installed in `/Applications`, outside the sandbox, so it can talk to BTdaemon. `libBTstack.dylib` is copied from the iPad itself and is not versioned.
 
-Antes de usar, deixe o Bluetooth do iOS desligado em Ajustes. O botão "Salvar" grava o registro em `Documents/padprobe.txt`.
+Before using it, turn iOS Bluetooth off in Settings. The "Save log" button writes the log to `Documents/padprobe.txt`.
 
-## Licença
+## License
 
-Os headers em `vendor/btstack` são do BTstack (© BlueKitchen GmbH / Matthias Ringwald) e seguem a licença dele.
+The headers in `vendor/btstack` are from BTstack (© BlueKitchen GmbH / Matthias Ringwald) and follow its license.
